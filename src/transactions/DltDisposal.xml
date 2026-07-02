@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Transaction : DltDisposal
+  Program     : FAZ145MI
+  Description : Delete an existing fixed-asset disposal record from
+                FFASLT.
+
+  Business Rules
+  ──────────────
+  1. The record identified by CONO + ASID + SBNO must exist in FFASLT.
+  2. Only records with status 20 (Pending / not yet posted) may be
+     deleted.  Posted (60) or Reversed (90) records must be reversed
+     through the accounting reversal workflow before deletion.
+  3. After deletion, the fixed-asset status in FFASLM is reset to its
+     previous value (e.g., 40 – In Service).
+  4. The deletion is irreversible; no soft-delete flag is set.
+-->
+<Transaction
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:noNamespaceSchemaLocation="../../schema/Transaction.xsd"
+    program="FAZ145MI"
+    name="DltDisposal"
+    description="Delete a fixed-asset disposal record"
+    type="Delete">
+
+  <!-- ── Input ──────────────────────────────────────────────────── -->
+  <InputParameters>
+    <Parameter field="CONO" description="Company Number"
+        type="Numeric" length="3" mandatory="false"
+        remarks="Defaults to the user's current company when blank."/>
+    <Parameter field="ASID" description="Fixed Asset ID"
+        type="String" length="10" mandatory="true"
+        remarks="Key field – must match FFASLT.ASID."/>
+    <Parameter field="SBNO" description="Sub-number"
+        type="Numeric" length="3" mandatory="true"
+        remarks="Key field – must match FFASLT.SBNO."/>
+  </InputParameters>
+
+  <!-- ── Output ─────────────────────────────────────────────────── -->
+  <OutputParameters>
+    <Parameter field="CONO" description="Company Number" type="Numeric" length="3"/>
+    <Parameter field="ASID" description="Fixed Asset ID" type="String"  length="10"/>
+    <Parameter field="SBNO" description="Sub-number"     type="Numeric" length="3"/>
+  </OutputParameters>
+
+  <!-- ── Error Codes ────────────────────────────────────────────── -->
+  <ErrorCodes>
+    <ErrorCode code="WF05001" description="No disposal record found for {ASID}/{SBNO} in company {CONO}."/>
+    <ErrorCode code="WF05002" description="Disposal record {ASID}/{SBNO} has status {STAT}; only pending records (status 20) may be deleted."/>
+  </ErrorCodes>
+
+</Transaction>

@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Schema : MIProgram.xsd
+  Validates the top-level FAZ145MI.mak program-definition file.
+-->
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
+
+  <!-- ── Root element ──────────────────────────────────────────── -->
+  <xs:element name="MIProgram">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="Transactions" type="TransactionsType"/>
+      </xs:sequence>
+      <xs:attribute name="program"     type="xs:string"  use="required"/>
+      <xs:attribute name="description" type="xs:string"  use="required"/>
+      <xs:attribute name="module"      type="xs:string"  use="required"/>
+      <xs:attribute name="type"        type="xs:string"  use="required"/>
+      <xs:attribute name="version"     type="xs:string"  use="required"/>
+    </xs:complexType>
+  </xs:element>
+
+  <!-- ── Transactions container ────────────────────────────────── -->
+  <xs:complexType name="TransactionsType">
+    <xs:sequence>
+      <xs:element name="Transaction" type="TransactionType"
+          minOccurs="1" maxOccurs="unbounded"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <!-- ── Single Transaction ────────────────────────────────────── -->
+  <xs:complexType name="TransactionType">
+    <xs:sequence>
+      <xs:element name="InputParameters"  type="ParametersType"/>
+      <xs:element name="OutputParameters" type="ParametersType"/>
+    </xs:sequence>
+    <xs:attribute name="name"        type="xs:string" use="required"/>
+    <xs:attribute name="description" type="xs:string" use="required"/>
+    <xs:attribute name="type"        type="TransactionTypeEnum" use="required"/>
+  </xs:complexType>
+
+  <!-- ── Parameters container ──────────────────────────────────── -->
+  <xs:complexType name="ParametersType">
+    <xs:sequence>
+      <xs:element name="Parameter" type="ParameterType"
+          minOccurs="0" maxOccurs="unbounded"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <!-- ── Single Parameter ──────────────────────────────────────── -->
+  <xs:complexType name="ParameterType">
+    <xs:attribute name="field"       type="xs:string"           use="required"/>
+    <xs:attribute name="description" type="xs:string"           use="required"/>
+    <xs:attribute name="type"        type="FieldTypeEnum"       use="required"/>
+    <xs:attribute name="length"      type="xs:positiveInteger"  use="required"/>
+    <xs:attribute name="mandatory"   type="xs:boolean"          use="optional" default="false"/>
+  </xs:complexType>
+
+  <!-- ── Enumerations ──────────────────────────────────────────── -->
+  <xs:simpleType name="TransactionTypeEnum">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="Add"/>
+      <xs:enumeration value="Change"/>
+      <xs:enumeration value="Delete"/>
+      <xs:enumeration value="Get"/>
+      <xs:enumeration value="List"/>
+      <xs:enumeration value="Copy"/>
+      <xs:enumeration value="Execute"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="FieldTypeEnum">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="Numeric"/>
+      <xs:enumeration value="String"/>
+      <xs:enumeration value="Date"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+</xs:schema>

@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Transaction : AddDisposal
+  Program     : FAZ145MI
+  Description : Add a new fixed-asset disposal record.
+
+  Business Rules
+  ──────────────
+  1. ASID + SBNO must reference an existing, active fixed-asset record
+     in FFASLM (Fixed Asset Sub-number Master).
+  2. DISP (Disposal Date) must be within an open fiscal period for the
+     company's Fixed Asset book.
+  3. DSCD (Disposal Code) must exist in the CSYTAB table, type "DSCD".
+  4. If DICU (Disposal Currency) is supplied it must exist in CSYTAB
+     type "CUCD"; otherwise the company base currency is used.
+  5. DIPR (Disposal Proceeds) must be >= 0.
+  6. A disposal record must not already exist for the same ASID/SBNO.
+  7. On success the fixed-asset status in FFASLM is updated to "60"
+     (Disposed) and an accounting entry is created in FGLEDG.
+-->
+<Transaction
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:noNamespaceSchemaLocation="../../schema/Transaction.xsd"
+    program="FAZ145MI"
+    name="AddDisposal"
+    description="Add a new fixed-asset disposal record"
+    type="Add">
+
+  <!-- ── Input ──────────────────────────────────────────────────── -->
+  <InputParameters>
+    <Parameter field="CONO" description="Company Number"
+        type="Numeric" length="3" mandatory="false"
+        remarks="Defaults to the user's current company when blank."/>
+    <Parameter field="ASID" description="Fixed Asset ID"
+        type="String" length="10" mandatory="true"
+        remarks="Must match FFASLM.ASID."/>
+    <Parameter field="SBNO" description="Sub-number"
+        type="Numeric" length="3" mandatory="true"
+        remarks="Must match FFASLM.SBNO for the given ASID."/>
+    <Parameter field="DISP" description="Disposal Date"
+        type="Numeric" length="8" mandatory="true"
+        remarks="Format YYYYMMDD. Must fall within an open FA period."/>
+    <Parameter field="DSCD" description="Disposal Code"
+        type="String" length="2" mandatory="true"
+        remarks="Valid values defined in CSYTAB type DSCD."/>
+    <Parameter field="DIPR" description="Disposal Proceeds"
+        type="Numeric" length="17" mandatory="false"
+        remarks="Net proceeds from the disposal. Defaults to 0."/>
+    <Parameter field="DICU" description="Disposal Currency"
+        type="String" length="3" mandatory="false"
+        remarks="ISO 4217 currency code. Defaults to company base currency."/>
+    <Parameter field="DIEX" description="Exchange Rate"
+        type="Numeric" length="13" mandatory="false"
+        remarks="Exchange rate to company base currency. Defaults to 1."/>
+    <Parameter field="ANOT" description="Notes / Remark"
+        type="String" length="60" mandatory="false"
+        remarks="Free-text description of the disposal."/>
+    <Parameter field="RESP" description="Responsible Employee"
+        type="String" length="10" mandatory="false"
+        remarks="Employee ID from CMNPRS."/>
+    <Parameter field="DEPT" description="Department"
+        type="String" length="8" mandatory="false"
+        remarks="Department code from MNDEPT."/>
+  </InputParameters>
+
+  <!-- ── Output ─────────────────────────────────────────────────── -->
+  <OutputParameters>
+    <Parameter field="CONO" description="Company Number"  type="Numeric" length="3"/>
+    <Parameter field="ASID" description="Fixed Asset ID"  type="String"  length="10"/>
+    <Parameter field="SBNO" description="Sub-number"      type="Numeric" length="3"/>
+    <Parameter field="DISP" description="Disposal Date"   type="Numeric" length="8"/>
+    <Parameter field="STAT" description="Record Status"   type="String"  length="2"
+        remarks="20 = Created and pending approval; 60 = Disposed and posted."/>
+  </OutputParameters>
+
+  <!-- ── Error Codes ────────────────────────────────────────────── -->
+  <ErrorCodes>
+    <ErrorCode code="WF01001" description="Fixed Asset {ASID}/{SBNO} does not exist."/>
+    <ErrorCode code="WF01002" description="Fixed Asset {ASID}/{SBNO} is already disposed."/>
+    <ErrorCode code="WF01003" description="Disposal Code {DSCD} is invalid."/>
+    <ErrorCode code="WF01004" description="Disposal Date {DISP} is outside an open FA period."/>
+    <ErrorCode code="WF01005" description="Currency {DICU} is not defined in the system."/>
+    <ErrorCode code="WF01006" description="Disposal Proceeds must be greater than or equal to zero."/>
+    <ErrorCode code="WF01007" description="A disposal record already exists for {ASID}/{SBNO}."/>
+  </ErrorCodes>
+
+</Transaction>
