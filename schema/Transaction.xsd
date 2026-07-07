@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Schema : Transaction.xsd
+  Validates each individual transaction XML file under src/transactions/.
+-->
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
+
+  <!-- ── Root element ──────────────────────────────────────────── -->
+  <xs:element name="Transaction">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="InputParameters"  type="ParametersType"/>
+        <xs:element name="OutputParameters" type="ParametersType"/>
+        <xs:element name="ErrorCodes"       type="ErrorCodesType" minOccurs="0"/>
+      </xs:sequence>
+      <xs:attribute name="program"     type="xs:string"          use="required"/>
+      <xs:attribute name="name"        type="xs:string"          use="required"/>
+      <xs:attribute name="description" type="xs:string"          use="required"/>
+      <xs:attribute name="type"        type="TransactionTypeEnum" use="required"/>
+    </xs:complexType>
+  </xs:element>
+
+  <!-- ── Parameters container ──────────────────────────────────── -->
+  <xs:complexType name="ParametersType">
+    <xs:sequence>
+      <xs:element name="Parameter" type="ParameterType"
+          minOccurs="0" maxOccurs="unbounded"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <!-- ── Single Parameter ──────────────────────────────────────── -->
+  <xs:complexType name="ParameterType">
+    <xs:attribute name="field"       type="xs:string"          use="required"/>
+    <xs:attribute name="description" type="xs:string"          use="required"/>
+    <xs:attribute name="type"        type="FieldTypeEnum"      use="required"/>
+    <xs:attribute name="length"      type="xs:positiveInteger" use="required"/>
+    <xs:attribute name="mandatory"   type="xs:boolean"         use="optional" default="false"/>
+    <xs:attribute name="remarks"     type="xs:string"          use="optional"/>
+  </xs:complexType>
+
+  <!-- ── Error codes container ─────────────────────────────────── -->
+  <xs:complexType name="ErrorCodesType">
+    <xs:sequence>
+      <xs:element name="ErrorCode" type="ErrorCodeType"
+          minOccurs="0" maxOccurs="unbounded"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <!-- ── Single Error Code ─────────────────────────────────────── -->
+  <xs:complexType name="ErrorCodeType">
+    <xs:attribute name="code"        type="xs:string" use="required"/>
+    <xs:attribute name="description" type="xs:string" use="required"/>
+  </xs:complexType>
+
+  <!-- ── Enumerations ──────────────────────────────────────────── -->
+  <xs:simpleType name="TransactionTypeEnum">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="Add"/>
+      <xs:enumeration value="Change"/>
+      <xs:enumeration value="Delete"/>
+      <xs:enumeration value="Get"/>
+      <xs:enumeration value="List"/>
+      <xs:enumeration value="Copy"/>
+      <xs:enumeration value="Execute"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="FieldTypeEnum">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="Numeric"/>
+      <xs:enumeration value="String"/>
+      <xs:enumeration value="Date"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+</xs:schema>

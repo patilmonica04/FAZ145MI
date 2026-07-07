@@ -1,0 +1,128 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Transaction : Dispose
+  Program     : FAZ145MI
+  Description : Execute a fixed-asset disposal.  Replicates the F13
+                "Dispose" action in the FAS145 interactive panel so
+                that the full disposal engine can be invoked via API
+                without operator interaction.
+
+  Source reference: FAZ145MI.java – Dispose() → TFA100() + CRTSC()
+  Standard UI      : FAS145 (Fixed Asset Dispose panel)
+
+  ── Execution flow ───────────────────────────────────────────────
+  Step 1 – Concurrency lock check
+           FFCHKF.CHAIN("00") – prevent concurrent disposal of the
+           same asset (mirrors FAS145 PACHK logic).
+
+  Step 2 – Asset master validation
+           FFASMA.CHAIN("00") – asset/sub-number must exist and
+           FAST must be ≤ 4 or = 8 (active; not already disposed).
+
+  Step 3 – Accounting date validation
+           ACDT is converted to an accounting year/period using
+           COMDAT() + CMNDIV.PTFA.  Then verified against the open
+           FA40 function period stored in CSYTAB/FFNC.
+
+  Step 4 – Voucher check
+           PLCHKVO.CCHKVON() validates voucher series and retrieves
+           the verification number (PLCHKVO.FVVONO).
+
+  Step 5 – Partial disposal (optional – FAQT supplied)
+           DIVASS() splits the asset; UFAH63() creates the new
+           sub-asset record.  IN63 is set true for partial path.
+
+  Step 6 – TFA100()
+           Iterates FFASDM depreciation books.  For each eligible
+           book writes a CJBCMD batch command record that triggers
+           the FAS100 depreciation engine.
+
+  Step 7 – CRTSC()
+           For each FFASDM record:
+             a. CRTVACC() resolves accounting string (7 account
+                dimensions) for event FA40.
+             b. Writes FCR040 voucher transaction lines (debit
+                acquisition, credit accumulated depreciation, credit
+                scrap/net book value).
+             c. Writes FFAHIS history record.
+             d. Updates/creates FFASVL value record.
+             e. Sets FFASDM.FAST = 9 (Disposed).
+           Writes acquisition reversal entry to FCR040/FFAHIS.
+           Calls wrtCAATRA() for equipment cost accounting (CAATRA).
+           Updates FFASMA.FAST = 9.
+
+  ── Business Rules ───────────────────────────────────────────────
+  1. DIVI is mandatory.
+  2. ASID + SBNO must match an existing FFASMA record.
+  3. FFASMA.FAST must be ≤ 4 or = 8.  Status 5–7 or 9 is rejected.
+  4. If ACDT is blank the system date is used.
+  5. ACDT must fall within the open FA40 function period (CSYTAB/FFNC).
+  6. FAQT must not exceed FFASMA.FAQT (total asset quantity).
+  7. The asset must not already be locked (FFCHKF record present).
+  8. Voucher number (VONO) is auto-assigned if CMNDIV.MVMA = 2.
+-->
+<Transaction
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:noNamespaceSchemaLocation="../../schema/Transaction.xsd"
+    program="FAZ145MI"
+    name="Dispose"
+    description="Execute fixed-asset disposal (mirrors FAS145 F13 action)"
+    type="Execute">
+
+  <!-- ── Input ──────────────────────────────────────────────────── -->
+  <InputParameters>
+    <Parameter field="CONO" description="Company Number"
+        type="Numeric" length="3" mandatory="false"
+        remarks="Defaults to the user's logged-in company when blank."/>
+    <Parameter field="DIVI" description="Division"
+        type="String" length="3" mandatory="true"
+        remarks="Must match a valid CMNDIV record."/>
+    <Parameter field="ASID" description="Fixed Asset ID"
+        type="String" length="10" mandatory="true"
+        remarks="Must match FFASMA.ASID."/>
+    <Parameter field="SBNO" description="Sub-number"
+        type="Numeric" length="3" mandatory="true"
+        remarks="Must match FFASMA.SBNO; use 0 for the main asset."/>
+    <Parameter field="ACDT" description="Accounting Date (YYYYMMDD)"
+        type="Numeric" length="8" mandatory="false"
+        remarks="Date posted to the general ledger.  Defaults to the
+                 system date when blank.  Must be within the open FA40
+                 function period (CSYTAB type FFNC)."/>
+    <Parameter field="FAQT" description="Disposal Quantity"
+        type="Numeric" length="9" mandatory="false"
+        remarks="Quantity being disposed.  Leave blank for a full
+                 disposal of all remaining quantity.  When &lt; total
+                 FFASMA.FAQT a partial disposal is performed:
+                 DIVASS() splits the asset and UFAH63() creates a new
+                 sub-asset for the retained portion."/>
+    <Parameter field="VTXT" description="Voucher Text"
+        type="String" length="40" mandatory="false"
+        remarks="Free-text description written to FCR040.VTXT and
+                 FFAHIS.VTXT for all generated voucher lines."/>
+  </InputParameters>
+
+  <!-- ── Output ─────────────────────────────────────────────────── -->
+  <OutputParameters>
+    <Parameter field="CONO" description="Company Number"      type="Numeric" length="3"/>
+    <Parameter field="ASID" description="Fixed Asset ID"      type="String"  length="10"/>
+    <Parameter field="STAT" description="Resulting Asset Status (FFASMA.FAST)"
+        type="String" length="2"
+        remarks="9 = Disposed and posted."/>
+  </OutputParameters>
+
+  <!-- ── Error Codes ────────────────────────────────────────────── -->
+  <ErrorCodes>
+    <ErrorCode code="WDI0102" description="Division must be entered."/>
+    <ErrorCode code="WAS3002" description="Fixed Asset ID must be entered."/>
+    <ErrorCode code="FA14506" description="Asset {ASID}/{SBNO} is currently locked by another process (FFCHKF)."/>
+    <ErrorCode code="FA14513" description="Fixed Asset {ASID}/{SBNO} does not exist (FFASMA not found)."/>
+    <ErrorCode code="FA14510" description="Fixed Asset {ASID}/{SBNO} has an invalid status for disposal (FAST &gt; 4 and ≠ 8)."/>
+    <ErrorCode code="XDT0001" description="Accounting date {ACDT} has an invalid format; expected YYYYMMDD."/>
+    <ErrorCode code="XDT0005" description="Accounting date {ACDT} is outside the open FA40 function period."/>
+    <ErrorCode code="XFE0002" description="FA function period (FA40) is not defined for this division."/>
+    <ErrorCode code="XFE0003" description="FA function period (FA40) is not defined (multi-company)."/>
+    <ErrorCode code="XNU000"  description="Disposal quantity {FAQT} is not a valid number."/>
+    <ErrorCode code="IP29103" description="Disposal quantity {FAQT} exceeds the total asset quantity."/>
+  </ErrorCodes>
+
+</Transaction>

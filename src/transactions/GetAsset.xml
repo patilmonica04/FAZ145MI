@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Transaction : GetAsset
+  Program     : FAZ145MI
+  Description : Retrieve fixed-asset master record (FFASMA) for the
+                supplied company / division / asset ID / sub-number.
+                Useful for callers that want to inspect the current
+                status, description, quantity or currency of an asset
+                before calling the Dispose transaction.
+
+  Source reference: FAZ145MI.java – getAsset() method
+  Database access : FFASMA (key "00", read-only)
+
+  Business Rules
+  ──────────────
+  1. DIVI (Division) is mandatory.
+  2. ASID (Fixed Asset ID) is mandatory.
+  3. SBNO (Sub-number) is mandatory; set to 0 for the master asset.
+  4. Returns error FA14513 when the asset/sub-number does not exist.
+-->
+<Transaction
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:noNamespaceSchemaLocation="../../schema/Transaction.xsd"
+    program="FAZ145MI"
+    name="GetAsset"
+    description="Retrieve fixed-asset master data (FFASMA)"
+    type="Get">
+
+  <!-- ── Input ──────────────────────────────────────────────────── -->
+  <InputParameters>
+    <Parameter field="CONO" description="Company Number"
+        type="Numeric" length="3" mandatory="false"
+        remarks="Defaults to the user's logged-in company when blank."/>
+    <Parameter field="DIVI" description="Division"
+        type="String" length="3" mandatory="true"
+        remarks="Must match CMNDIV.DIVI for the company."/>
+    <Parameter field="ASID" description="Fixed Asset ID"
+        type="String" length="10" mandatory="true"
+        remarks="Must match FFASMA.ASID."/>
+    <Parameter field="SBNO" description="Sub-number"
+        type="Numeric" length="3" mandatory="true"
+        remarks="Use 0 for the main asset record."/>
+  </InputParameters>
+
+  <!-- ── Output ─────────────────────────────────────────────────── -->
+  <OutputParameters>
+    <Parameter field="CONO" description="Company Number"   type="Numeric" length="3"/>
+    <Parameter field="DIVI" description="Division"         type="String"  length="3"/>
+    <Parameter field="ASID" description="Fixed Asset ID"   type="String"  length="10"/>
+    <Parameter field="SBNO" description="Sub-number"       type="Numeric" length="3"/>
+    <Parameter field="FADS" description="Asset Description" type="String" length="40"
+        remarks="Short description of the fixed asset (FFASMA.FADS)."/>
+    <Parameter field="FAST" description="Fixed Asset Status" type="Numeric" length="2"
+        remarks="1=Ordered, 2=Received, 3=Active, 4=In Service, 8=On Hold, 9=Disposed."/>
+    <Parameter field="FAQT" description="Asset Quantity"    type="Numeric" length="9"
+        remarks="Total quantity associated with this asset/sub-number."/>
+    <Parameter field="CUCD" description="Currency Code"     type="String"  length="3"
+        remarks="ISO 4217 currency code from FFASMA.CUCD."/>
+  </OutputParameters>
+
+  <!-- ── Error Codes ────────────────────────────────────────────── -->
+  <ErrorCodes>
+    <ErrorCode code="WDI0102" description="Division must be entered."/>
+    <ErrorCode code="WAS3002" description="Fixed Asset ID must be entered."/>
+    <ErrorCode code="FA14513" description="Fixed Asset {ASID} / Sub-number {SBNO} does not exist."/>
+  </ErrorCodes>
+
+</Transaction>
